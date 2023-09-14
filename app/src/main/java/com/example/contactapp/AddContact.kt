@@ -1,19 +1,19 @@
 package com.example.contactapp
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,10 +34,13 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContact(selectedScreen: MutableState<String>) {
+    val hideKeyboard = remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .clickable { hideKeyboard.value = true }
+
     ) {
         Scaffold(
             topBar = {
@@ -77,12 +80,11 @@ fun AddContact(selectedScreen: MutableState<String>) {
                 modifier = Modifier
                     .padding(it),
                 content ={
-                    item { AddPhotoContact() }
-                    item {  ContactTextFields(textFieldName = "Name") }
-                    item {  ContactTextFields(textFieldName = "Last Name") }
-                    item {  ContactTextFields(textFieldName = "Phone Number") }
-                    item {  ContactTextFields(textFieldName = "Email") }
-
+                    item { AddPhotoContact(hideKeyboard) }
+                    item {   AddContactTextFields("Name",false,Icons.Filled.Face,hideKeyboard.value, { hideKeyboard.value = false }) }
+                    item {   AddContactTextFields("Last Name",false, null, hideKeyboard.value, { hideKeyboard.value = false })}
+                    item {   AddContactTextFields("Phone Number",true,Icons.Filled.Phone,hideKeyboard.value, { hideKeyboard.value = false })}
+                    item {   AddContactTextFields("Email",false,Icons.Filled.Email, hideKeyboard.value, { hideKeyboard.value = false })}
                 }
 
             )
@@ -90,13 +92,14 @@ fun AddContact(selectedScreen: MutableState<String>) {
     }
 }
 @Composable
-fun AddPhotoContact() {
+fun AddPhotoContact(hideKeyboard: MutableState<Boolean>) {
     IconButton(
-        onClick = { /*TODO*/ },
+        onClick = {
+                  hideKeyboard.value = true
+        },
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp)
-
     ) {
         Icon(
             imageVector = Icons.Filled.Face,
@@ -111,19 +114,4 @@ fun AddPhotoContact() {
         modifier = Modifier
             .fillMaxWidth()
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ContactTextFields(
-    textFieldName: String
-){
-    val textField = remember{ mutableStateOf("") }
-    OutlinedTextField(
-        value = textField.value,
-        onValueChange = {textField.value = it},
-        label = { Text(text = textFieldName) },
-        modifier = Modifier
-    )
-
 }

@@ -19,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +63,60 @@ fun SearchBar(
         label = { Text(label) },
         leadingIcon = {Icon(Icons.Filled.Search,"SearchIcon", tint = Color.White) },
         trailingIcon = {Icon(Icons.Filled.Settings,"SearchIcon", tint = Color.White) }
+    )
+    if (hideKeyboard) {
+        focusManager.clearFocus()
+        onFocusClear()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddContactTextFields(
+    label: String = "",
+    numberKeyBoard: Boolean,
+    leadingIcon: ImageVector?,
+    hideKeyboard: Boolean = false,
+    onFocusClear: () -> Unit = {},
+    onSearch: (String) -> Unit = {}
+) {
+    var keyboardOptions =  KeyboardOptions(imeAction = ImeAction.Done)
+    if (numberKeyBoard){
+       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, keyboardType = KeyboardType.Number)
+    }
+    val text = remember {
+        mutableStateOf("")
+    }
+    val isHintDisplayed = remember {
+        mutableStateOf(false)
+    }
+    val focusManager = LocalFocusManager.current
+    OutlinedTextField(
+        value = text.value,
+        onValueChange = {
+            text.value = it
+            onSearch(text.value)
+        },
+        keyboardOptions = keyboardOptions ,
+        keyboardActions = KeyboardActions(onDone = {
+            focusManager.clearFocus()
+            onSearch(text.value)
+        }),
+        maxLines = 1,
+        singleLine = true,
+        modifier = Modifier
+            .fillMaxWidth(1f)
+            .padding(10.dp)
+            .onFocusChanged {
+                isHintDisplayed.value = !it.hasFocus
+            },
+        shape = CircleShape,
+        label = { Text(label) },
+        leadingIcon = {
+            leadingIcon?.let {
+                Icon(imageVector = it, contentDescription = null)
+            }
+        }
     )
     if (hideKeyboard) {
         focusManager.clearFocus()

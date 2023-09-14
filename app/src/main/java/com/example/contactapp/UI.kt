@@ -36,13 +36,7 @@ fun UI(selectedScreen: MutableState<String>) {
             Scaffold(
                 topBar = {
                     Spacer(modifier = Modifier.height(20.dp))
-                    SearchBar(
-                        "Search Contact",
-                        hideKeyboard.value,
-                        { hideKeyboard.value = false }
-                    ) {
-
-                    }
+                    SearchBar("Search Contact", hideKeyboard.value, { hideKeyboard.value = false })
                 },
                 floatingActionButton = {
                     FloatingActionButton(onClick = {
