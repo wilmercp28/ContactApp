@@ -77,8 +77,7 @@ fun AddContactTextFields(
     numberKeyBoard: Boolean,
     leadingIcon: ImageVector?,
     hideKeyboard: Boolean = false,
-    onFocusClear: () -> Unit = {},
-    onSearch: (String) -> Unit = {}
+    onFocusClear: (String) -> Unit = {}
 ) {
     var keyboardOptions =  KeyboardOptions(imeAction = ImeAction.Done)
     if (numberKeyBoard){
@@ -95,12 +94,12 @@ fun AddContactTextFields(
         value = text.value,
         onValueChange = {
             text.value = it
-            onSearch(text.value)
+            onFocusClear("$label ${text.value}")
         },
         keyboardOptions = keyboardOptions ,
         keyboardActions = KeyboardActions(onDone = {
             focusManager.clearFocus()
-            onSearch(text.value)
+            onFocusClear("$label ${text.value}")
         }),
         maxLines = 1,
         singleLine = true,
@@ -120,6 +119,6 @@ fun AddContactTextFields(
     )
     if (hideKeyboard) {
         focusManager.clearFocus()
-        onFocusClear()
+        onFocusClear("$label ${text.value}")
     }
 }

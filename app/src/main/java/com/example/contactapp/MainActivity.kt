@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import com.example.contactapp.ui.theme.ContactAppTheme
 
@@ -21,10 +22,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    val contactsList = rememberSaveable{ mutableListOf<Contact>()}
                     val selectedScreen = remember { mutableStateOf("UI") }
                     when(selectedScreen.value) {
-                        "UI" -> UI(selectedScreen)
-                        "AddContact" -> AddContact(selectedScreen)
+                        "UI" -> UI(selectedScreen,contactsList)
+                        "AddContact" -> AddContact(selectedScreen,contactsList)
                     }
 
                 }

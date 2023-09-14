@@ -22,34 +22,46 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UI(selectedScreen: MutableState<String>) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = Modifier.fillMaxSize()
-    ) {
-
-        val hideKeyboard = remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .clickable { hideKeyboard.value = true }
+fun UI(
+    selectedScreen: MutableState<String>,
+    contactsList: MutableList<Contact>
+) {
+    val selectedContact = remember { mutableStateOf(0) }
+    val openContact = remember { mutableStateOf(false) }
+    if (openContact.value) {
+        ShowContactDetails(contactsList, selectedContact.value,openContact)
+    } else {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize()
         ) {
-            Scaffold(
-                topBar = {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    SearchBar("Search Contact", hideKeyboard.value, { hideKeyboard.value = false })
-                },
-                floatingActionButton = {
-                    FloatingActionButton(onClick = {
-                        selectedScreen.value = "AddContact"
-                    }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "AddContact")
-                    }
-                }
+            val hideKeyboard = remember { mutableStateOf(false) }
+            Column(
+                modifier = Modifier
+                    .clickable { hideKeyboard.value = true }
             ) {
-                it
+                Scaffold(
+                    topBar = {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SearchBar(
+                            "Search Contact",
+                            hideKeyboard.value,
+                            { hideKeyboard.value = false })
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(onClick = {
+                            selectedScreen.value = "AddContact"
+                        }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "AddContact")
+                        }
+                    }
+                ) {
+                    ContactListShow(contactsList, it,openContact,selectedContact)
+                }
             }
         }
     }
 }
+
 

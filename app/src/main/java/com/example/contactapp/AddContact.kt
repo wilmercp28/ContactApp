@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,7 +32,14 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddContact(selectedScreen: MutableState<String>) {
+fun AddContact(
+    selectedScreen: MutableState<String>,
+    contactsList: MutableList<Contact>
+) {
+    val name = remember { mutableStateOf("") }
+    val lastName = remember { mutableStateOf("") }
+    val phoneNumber = remember { mutableStateOf("") }
+    val email = remember { mutableStateOf("") }
     val hideKeyboard = remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
@@ -49,7 +55,7 @@ fun AddContact(selectedScreen: MutableState<String>) {
                     actions = {
                         IconButton(
                             onClick = {
-
+                                addContact(contactsList,name.value,lastName.value,phoneNumber.value,email.value)
                             },
                             modifier = Modifier
                                 .background(
@@ -79,20 +85,43 @@ fun AddContact(selectedScreen: MutableState<String>) {
             LazyColumn(
                 modifier = Modifier
                     .padding(it),
-                content ={
+                content = {
                     item { AddPhotoContact(hideKeyboard) }
-                    item {   AddContactTextFields("Name",false,Icons.Filled.Face,hideKeyboard.value, { hideKeyboard.value = false }) }
-                    item {   AddContactTextFields("Last Name",false, null, hideKeyboard.value, { hideKeyboard.value = false })}
-                    item {   AddContactTextFields("Phone Number",true,Icons.Filled.Phone,hideKeyboard.value, { hideKeyboard.value = false })}
-                    item {   AddContactTextFields("Email",false,Icons.Filled.Email, hideKeyboard.value, { hideKeyboard.value = false })}
+                    item {
+                        AddContactTextFields("Name", false, Icons.Filled.Face, hideKeyboard.value) { lostFocusString ->
+                            name.value = lostFocusString
+                        }
+                    }
+                    item {
+                        AddContactTextFields("Last Name", false, null, hideKeyboard.value) { lostFocusString ->
+                            lastName.value = lostFocusString
+                        }
+                    }
+                    item {
+                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone, hideKeyboard.value) { lostFocusString ->
+                            phoneNumber.value = lostFocusString
+                        }
+                    }
+                    item {
+                        AddContactTextFields("Email", false, Icons.Filled.Email, hideKeyboard.value) { lostFocusString ->
+                            email.value = lostFocusString
+                        }
+                    }
                 }
-
             )
         }
     }
 }
+
+fun saveContact(
+
+){
+
+}
 @Composable
-fun AddPhotoContact(hideKeyboard: MutableState<Boolean>) {
+fun AddPhotoContact(
+    hideKeyboard: MutableState<Boolean>
+) {
     IconButton(
         onClick = {
                   hideKeyboard.value = true
