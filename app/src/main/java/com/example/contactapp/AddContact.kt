@@ -26,16 +26,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContact(
     selectedScreen: MutableState<String>,
-    contactsList: MutableList<Contact>
+    contactsList: MutableList<Contact>,
+    dataStore: DataStore<Preferences>
 ) {
+    val scope = rememberCoroutineScope()
     val name = remember { mutableStateOf("") }
     val lastName = remember { mutableStateOf("") }
     val phoneNumber = remember { mutableStateOf("") }
@@ -56,6 +63,9 @@ fun AddContact(
                         IconButton(
                             onClick = {
                                 addContact(contactsList,name.value,lastName.value,phoneNumber.value,email.value)
+                                scope.launch {
+                                    SaveData(dataStore).saveContactList(contactsList)
+                                }
                             },
                             modifier = Modifier
                                 .background(

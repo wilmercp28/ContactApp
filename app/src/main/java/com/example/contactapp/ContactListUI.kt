@@ -40,6 +40,7 @@ fun ContactListShow(
 ) {
     val initialIconSize = 50.dp
     val fontSize = 20.sp
+
         LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
@@ -58,7 +59,7 @@ fun ContactListShow(
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Box(
-                        modifier = androidx.compose.ui.Modifier
+                        modifier = Modifier
                             .size(initialIconSize)
                             .background(
                                 MaterialTheme.colorScheme.primary,
