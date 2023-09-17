@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                         contactsList.addAll(loadedContacts)
                         loading = false
                     }
-                    val selectedScreen = remember { mutableStateOf("UI") }
+                    val selectedScreen = rememberSaveable { mutableStateOf("UI") }
                     if (loading) {
                         // Show a loading indicator or placeholder
                         CircularProgressIndicator()

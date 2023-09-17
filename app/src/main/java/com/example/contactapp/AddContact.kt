@@ -1,13 +1,28 @@
 package com.example.contactapp
 
+import android.content.ContentResolver
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.Matrix.ScaleToFit
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -23,17 +38,28 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,20 +158,50 @@ fun saveContact(
 fun AddPhotoContact(
     hideKeyboard: MutableState<Boolean>
 ) {
+    var imageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    val bitmap = rememberSaveable { mutableStateOf<Bitmap?>(null) }
+    imageUri?.let {
+        bitmap.value = loadImageFromUri(context.contentResolver, it)
+    }
+    val galleryLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+                imageUri = it
+
+        }
     IconButton(
         onClick = {
                   hideKeyboard.value = true
+            galleryLauncher.launch("image/*")
         },
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
+            .size(100.dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.Face,
-            contentDescription ="PhotoPlaceHolder",
-        modifier = Modifier
-            .fillMaxSize()
+        if (bitmap.value != null) {
+            Box(
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+            ) {
+                Image(
+                    bitmap = bitmap.value!!.asImageBitmap(),
+                    contentDescription = "SelectedPhoto",
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentScale = ContentScale.FillBounds,
+                    alignment = Alignment.Center
+
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Filled.Face,
+                contentDescription = "PhotoPlaceHolder",
+                modifier = Modifier
+                    .fillMaxSize()
             )
+        }
     }
     Text(
         text = "Add photo",
@@ -153,4 +209,51 @@ fun AddPhotoContact(
         modifier = Modifier
             .fillMaxWidth()
     )
+}
+fun loadImageFromUri(contentResolver: ContentResolver, uri: Uri, maxSize: Int = 1024): Bitmap? {
+    return try {
+        val inputStream = contentResolver.openInputStream(uri)
+        if (inputStream != null) {
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeStream(inputStream, null, options)
+
+            // Calculate the inSampleSize value to resize the image
+            options.inSampleSize = calculateInSampleSize(options, maxSize, maxSize)
+
+            // Close the input stream and reopen it for decoding
+            inputStream.close()
+            val newInputStream = contentResolver.openInputStream(uri)
+
+            // Decode the image with the calculated inSampleSize
+            options.inJustDecodeBounds = false
+            val resizedBitmap = BitmapFactory.decodeStream(newInputStream, null, options)
+
+            // Close the new input stream
+            newInputStream?.close()
+
+            resizedBitmap
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val height = options.outHeight
+    val width = options.outWidth
+    var inSampleSize = 1
+
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+
+        while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+
+    return inSampleSize
 }
