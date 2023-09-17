@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -50,7 +51,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.android.tools.build.jetifier.core.utils.Log
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,19 +62,19 @@ fun AddContact(
     contactsList: MutableList<Contact>,
     dataStore: DataStore<Preferences>
 ) {
-    val contactPhoto = rememberSaveable { mutableStateOf<Bitmap?>(null) }
     val scope = rememberCoroutineScope()
     val name = remember { mutableStateOf("") }
     val lastName = remember { mutableStateOf("") }
     val phoneNumber = remember { mutableStateOf("") }
     val email = remember { mutableStateOf("") }
+    val photo = remember { mutableStateOf<Bitmap?>(null) }
     val hideKeyboard = remember { mutableStateOf(false) }
+    val validList = remember {mutableListOf<Boolean>()}
     Surface(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .clickable { hideKeyboard.value = true }
-
     ) {
         Scaffold(
             topBar = {
@@ -80,9 +83,10 @@ fun AddContact(
                     actions = {
                         IconButton(
                             onClick = {
-                                addContact(contactsList,contactPhoto,name.value,lastName.value,phoneNumber.value,email.value)
+                                val photoString = encodeBitmapToBase64(photo.value)
+                                addContact(contactsList,photoString.toString(),name.value,lastName.value,phoneNumber.value,email.value)
                                 scope.launch {
-                                    SaveData(dataStore).saveContactListWithImage(contactsList,contactPhoto)
+                                    SaveData(dataStore).saveContactListWithImage(contactsList)
                                 }
                             },
                             modifier = Modifier
@@ -115,25 +119,25 @@ fun AddContact(
                     .padding(it),
                 content = {
                     item {
-                        AddPhotoContact(hideKeyboard,contactPhoto)
+                        AddPhotoContact(hideKeyboard,photo)
                     }
                     item {
-                        AddContactTextFields("Name", false, Icons.Filled.Face, hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Name", false, Icons.Filled.Face,true,hideKeyboard.value) { lostFocusString ->
                             name.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Last Name", false, null, hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Last Name", false, null,false,hideKeyboard.value) { lostFocusString ->
                             lastName.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone, hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone,false,hideKeyboard.value) { lostFocusString ->
                             phoneNumber.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Email", false, Icons.Filled.Email, hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Email", false, Icons.Filled.Email,false,hideKeyboard.value) { lostFocusString ->
                             email.value = lostFocusString
                         }
                     }
@@ -142,16 +146,24 @@ fun AddContact(
         }
     }
 }
+fun encodeBitmapToBase64(bitmap: Bitmap?): String? {
+    if (bitmap == null) return null
+
+    val byteArrayOutputStream = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+    val byteArray = byteArrayOutputStream.toByteArray()
+    return Base64.encodeToString(byteArray, Base64.DEFAULT)
+}
 
 @Composable
 fun AddPhotoContact(
     hideKeyboard: MutableState<Boolean>,
-    bitmap: MutableState<Bitmap?>
+    photo: MutableState<Bitmap?>
 ) {
     var imageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     imageUri?.let {
-        bitmap.value = loadImageFromUri(context.contentResolver, it)
+        photo.value = loadImageFromUri(context.contentResolver, it)
     }
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
@@ -160,21 +172,21 @@ fun AddPhotoContact(
         }
     IconButton(
         onClick = {
-                  hideKeyboard.value = true
+            hideKeyboard.value = true
             galleryLauncher.launch("image/*")
         },
         modifier = Modifier
             .fillMaxWidth()
             .size(100.dp)
     ) {
-        if (bitmap.value != null) {
+        if (photo.value != null) {
             Box(
                 modifier = Modifier
                     .aspectRatio(1f)
                     .clip(CircleShape)
             ) {
                 Image(
-                    bitmap = bitmap.value!!.asImageBitmap(),
+                    bitmap = photo.value!!.asImageBitmap(),
                     contentDescription = "SelectedPhoto",
                     modifier = Modifier
                         .fillMaxSize(),

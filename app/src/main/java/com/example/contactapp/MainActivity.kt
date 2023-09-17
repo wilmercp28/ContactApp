@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.preferencesDataStore
+import com.android.tools.build.jetifier.core.utils.Log
 
 
 private val Context.dataStore by preferencesDataStore(name = "Contacts")
@@ -29,28 +30,27 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             ContactAppTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var loading by remember { mutableStateOf(true) }
-                    val contactsList = rememberSaveable{ mutableListOf<Contact>()}
+                    val contactsList = rememberSaveable { mutableListOf<Contact>() }
+
                     LaunchedEffect(contactsList) {
-                        val loadedContacts = SaveData(dataStore).loadContactList()
-                        contactsList.addAll(loadedContacts)
+                        val loadedContacts = SaveData(dataStore).loadContactListWithImage()
+                        contactsList.addAll(loadedContacts ?: emptyList())
+                        Log.d("ContactList",contactsList.toString())
                         loading = false
                     }
                     val selectedScreen = rememberSaveable { mutableStateOf("UI") }
                     if (loading) {
-                        // Show a loading indicator or placeholder
                         CircularProgressIndicator()
                     } else {
-                        // Render your UI components here
                         UI(selectedScreen, contactsList)
                         when (selectedScreen.value) {
                             "UI" -> UI(selectedScreen, contactsList)
-                            "AddContact" -> AddContact(selectedScreen, contactsList, dataStore)
+                            "AddContact" -> AddContact(selectedScreen,contactsList,dataStore)
                         }
                     }
 
@@ -59,5 +59,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+
 
 

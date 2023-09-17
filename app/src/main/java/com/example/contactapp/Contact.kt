@@ -1,29 +1,30 @@
 package com.example.contactapp
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import com.android.tools.build.jetifier.core.utils.Log
 
 
 data class Contact(
 
     val id: Int,
-    val photo: MutableState<Bitmap?>,
+    val photo: String?,
     val name: String,
     val lastName: String,
     val phoneNumber: String,
@@ -32,7 +33,7 @@ data class Contact(
 
 fun addContact(
     contactsList: MutableList<Contact>,
-    photo: MutableState<Bitmap?>,
+    photo: String,
     name: String,
     lastName: String,
     phoneNumber: String,
@@ -48,36 +49,6 @@ fun addContact(
         photo = photo
     )
     contactsList.add(newContact)
+    Log.d("ContactList",contactsList.toString())
 }
-@Composable
-fun ContactPhoto(
-    size: Dp,
-    contactInfo: Contact,
-    photo: Bitmap?
-){
-    Box(
-        modifier = Modifier
-            .size(size)
-            .background(
-                MaterialTheme.colorScheme.primary,
-                RoundedCornerShape(size)
-            )
-    ) {
-        if (photo == null) {
-            Text(
-                text = contactInfo.name.removePrefix("Name ").first().toString(),
-                fontSize = 30.sp
-            )
-        } else {
-            Image(
-                bitmap = photo.asImageBitmap(),
-                contentDescription = "SelectedPhoto",
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentScale = ContentScale.FillBounds,
-                alignment = Alignment.Center
 
-            )
-        }
-    }
-}

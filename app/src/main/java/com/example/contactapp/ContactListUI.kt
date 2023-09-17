@@ -1,5 +1,10 @@
 package com.example.contactapp
 
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,11 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.tools.build.jetifier.core.utils.Log
 
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
 fun ContactListShow(
     contactsList: MutableList<Contact>,
@@ -67,10 +77,11 @@ fun ContactListShow(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = contactInfo.name.removePrefix("Name ").first().toString(),
-                            fontSize = fontSize
-                        )
+                            Text(
+                                text = contactInfo.name.removePrefix("Name ").first().toString(),
+                                fontSize = fontSize
+                            )
+
                     }
                     Text(
                         text = "${contactInfo.name.removePrefix("Name ")} ${
@@ -91,13 +102,13 @@ fun ShowContactDetails(
     contactsList: MutableList<Contact>,
     showingContact: Int,
     openContact: MutableState<Boolean>
-){
-
+) {
     Surface(
         modifier = Modifier
             .fillMaxSize()
     ) {
         val contactInfo = contactsList[showingContact]
+        Log.d("Phto",contactInfo.photo.toString())
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -105,10 +116,10 @@ fun ShowContactDetails(
                     navigationIcon = {
                         IconButton(
                             onClick = {
-                               openContact.value = false
+                                openContact.value = false
                             }
                         ) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back" )
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
 
@@ -121,15 +132,39 @@ fun ShowContactDetails(
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ContactPhoto(150.dp,contactInfo)
-                Text(text = contactInfo.name.removePrefix("Name "))
-                Text(text = contactInfo.lastName.removePrefix("Last Name "))
-                Text(text = contactInfo.email.removePrefix("Email "))
-                Text(text = contactInfo.phoneNumber.removePrefix("Phone Number "))
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(100.dp)
+                        )
+                ) {
+                    if (contactInfo.photo != null) {
+                        val imageBytes = Base64.decode(contactInfo.photo, Base64.DEFAULT)
+                        val bitmapPhoto: Bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        Image(
+                            bitmap = bitmapPhoto.asImageBitmap(),
+                            contentDescription = "SelectedPhoto",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.FillBounds,
+                            alignment = Alignment.Center
+                        )
+                    } else {
+                        Text(
+                            text = contactInfo.name.removePrefix("Name ").first().toString(),
+                            fontSize = 30.sp
+                        )
+                    }
+                    Text(text = contactInfo.name.removePrefix("Name "))
+                    Text(text = contactInfo.lastName.removePrefix("Last Name "))
+                    Text(text = contactInfo.email.removePrefix("Email "))
+                    Text(text = contactInfo.phoneNumber.removePrefix("Phone Number "))
+                }
+
             }
 
+
         }
-        
     }
-    
 }
