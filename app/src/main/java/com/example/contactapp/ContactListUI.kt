@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -40,7 +41,6 @@ fun ContactListShow(
 ) {
     val initialIconSize = 50.dp
     val fontSize = 20.sp
-
         LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
@@ -92,6 +92,7 @@ fun ShowContactDetails(
     showingContact: Int,
     openContact: MutableState<Boolean>
 ){
+
     Surface(
         modifier = Modifier
             .fillMaxSize()

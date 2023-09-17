@@ -3,11 +3,7 @@ package com.example.contactapp
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
-import android.graphics.Matrix.ScaleToFit
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,7 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,7 +33,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -57,9 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +59,7 @@ fun AddContact(
     contactsList: MutableList<Contact>,
     dataStore: DataStore<Preferences>
 ) {
+    val contactPhoto = rememberSaveable { mutableStateOf<Bitmap?>(null) }
     val scope = rememberCoroutineScope()
     val name = remember { mutableStateOf("") }
     val lastName = remember { mutableStateOf("") }
@@ -88,9 +80,9 @@ fun AddContact(
                     actions = {
                         IconButton(
                             onClick = {
-                                addContact(contactsList,name.value,lastName.value,phoneNumber.value,email.value)
+                                addContact(contactsList,contactPhoto,name.value,lastName.value,phoneNumber.value,email.value)
                                 scope.launch {
-                                    SaveData(dataStore).saveContactList(contactsList)
+                                    SaveData(dataStore).saveContactListWithImage(contactsList,contactPhoto)
                                 }
                             },
                             modifier = Modifier
@@ -122,7 +114,9 @@ fun AddContact(
                 modifier = Modifier
                     .padding(it),
                 content = {
-                    item { AddPhotoContact(hideKeyboard) }
+                    item {
+                        AddPhotoContact(hideKeyboard,contactPhoto)
+                    }
                     item {
                         AddContactTextFields("Name", false, Icons.Filled.Face, hideKeyboard.value) { lostFocusString ->
                             name.value = lostFocusString
@@ -149,18 +143,13 @@ fun AddContact(
     }
 }
 
-fun saveContact(
-
-){
-
-}
 @Composable
 fun AddPhotoContact(
-    hideKeyboard: MutableState<Boolean>
+    hideKeyboard: MutableState<Boolean>,
+    bitmap: MutableState<Bitmap?>
 ) {
     var imageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
-    val bitmap = rememberSaveable { mutableStateOf<Bitmap?>(null) }
     imageUri?.let {
         bitmap.value = loadImageFromUri(context.contentResolver, it)
     }
