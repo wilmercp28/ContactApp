@@ -12,14 +12,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,9 +37,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +57,7 @@ fun ContactListShow(
     selectedContact: MutableState<Int>
 ) {
     val initialIconSize = 50.dp
-    val fontSize = 20.sp
+    val fontSize = 20
         LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
@@ -74,14 +81,44 @@ fun ContactListShow(
                             .background(
                                 MaterialTheme.colorScheme.primary,
                                 RoundedCornerShape(initialIconSize)
-                            ),
+                            )
+                            .aspectRatio(1f)
+                            .clip(CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
+                        if (contactInfo.photo.isNullOrEmpty()) {
                             Text(
                                 text = contactInfo.name.removePrefix("Name ").first().toString(),
-                                fontSize = fontSize
+                                fontSize = fontSize.sp
                             )
-
+                        } else {
+                            val imageBytes = Base64.decode(contactInfo.photo, Base64.DEFAULT)
+                            if (imageBytes != null) {
+                                val bitmapPhoto: Bitmap? =
+                                    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                if (bitmapPhoto != null) {
+                                    Image(
+                                        bitmap = bitmapPhoto.asImageBitmap(),
+                                        contentDescription = "SelectedPhoto",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.FillBounds,
+                                        alignment = Alignment.Center
+                                    )
+                                } else {
+                                    Text(
+                                        text = contactInfo.name.removePrefix("Name ").first()
+                                            .toString(),
+                                        fontSize = fontSize.sp
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = contactInfo.name.removePrefix("Name ").first()
+                                        .toString(),
+                                    fontSize = fontSize.sp
+                                )
+                            }
+                        }
                     }
                     Text(
                         text = "${contactInfo.name.removePrefix("Name ")} ${
@@ -89,7 +126,7 @@ fun ContactListShow(
                                 "Last Name "
                             )
                         }",
-                        fontSize = fontSize
+                        fontSize = fontSize.sp
                     )
                 }
 
@@ -107,8 +144,13 @@ fun ShowContactDetails(
         modifier = Modifier
             .fillMaxSize()
     ) {
+        val iconFontSize = 100
+        val fontSize = 20
         val contactInfo = contactsList[showingContact]
-        Log.d("Phto",contactInfo.photo.toString())
+        val name = contactInfo.name.removePrefix("Name ").trim()
+        val lastName = contactInfo.lastName.removePrefix("Last Name ").trim()
+        val email = contactInfo.email.removePrefix("Email ").trim()
+        val phoneNumber = contactInfo.phoneNumber.removePrefix("Phone Number ").trim()
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -130,41 +172,97 @@ fun ShowContactDetails(
                 modifier = Modifier
                     .padding(it)
                     .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(150.dp)
                         .background(
                             MaterialTheme.colorScheme.primary,
                             RoundedCornerShape(100.dp)
                         )
+                        .aspectRatio(1f)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
                     if (contactInfo.photo != null) {
                         val imageBytes = Base64.decode(contactInfo.photo, Base64.DEFAULT)
-                        val bitmapPhoto: Bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                        Image(
-                            bitmap = bitmapPhoto.asImageBitmap(),
-                            contentDescription = "SelectedPhoto",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.FillBounds,
-                            alignment = Alignment.Center
-                        )
+                        if (imageBytes != null) {
+                            val bitmapPhoto: Bitmap? = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                            if (bitmapPhoto != null) {
+                                Image(
+                                    bitmap = bitmapPhoto.asImageBitmap(),
+                                    contentDescription = "SelectedPhoto",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.FillBounds,
+                                    alignment = Alignment.Center
+                                )
+                            } else {
+                                Text(
+                                    text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
+                                    fontSize = iconFontSize.sp,
+                                    textAlign = TextAlign.Center,
+
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
+                                fontSize = iconFontSize.sp,
+                                textAlign = TextAlign.Center,
+
+                            )
+                        }
                     } else {
                         Text(
-                            text = contactInfo.name.removePrefix("Name ").first().toString(),
-                            fontSize = 30.sp
+                            text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
+                            fontSize = iconFontSize.sp,
+                            textAlign = TextAlign.Center,
+
                         )
                     }
-                    Text(text = contactInfo.name.removePrefix("Name "))
-                    Text(text = contactInfo.lastName.removePrefix("Last Name "))
-                    Text(text = contactInfo.email.removePrefix("Email "))
-                    Text(text = contactInfo.phoneNumber.removePrefix("Phone Number "))
                 }
-
+                Spacer(modifier = Modifier.size(20.dp))
+                Text(text ="$name $lastName",fontSize = (fontSize + 10).sp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(30.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(20))
+                ) {
+                    Text(
+                        text = "Contact Details",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = fontSize.sp
+                    )
+                    if (email.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.padding(20.dp)
+                        ) {
+                            Icon(Icons.Filled.Email, "")
+                            Text(
+                                text = email,
+                                fontSize = fontSize.sp
+                            )
+                        }
+                    }
+                    if (phoneNumber.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.padding(20.dp)
+                        ) {
+                            Icon(Icons.Filled.Phone, "")
+                            Text(
+                                text = contactInfo.phoneNumber.removePrefix("Phone Number ").trim(),
+                                fontSize = fontSize.sp
+                            )
+                        }
+                    }
+                }
             }
-
-
         }
     }
 }

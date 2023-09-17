@@ -33,7 +33,7 @@ data class Contact(
 
 fun addContact(
     contactsList: MutableList<Contact>,
-    photo: String,
+    photo: String?,
     name: String,
     lastName: String,
     phoneNumber: String,
@@ -49,6 +49,5 @@ fun addContact(
         photo = photo
     )
     contactsList.add(newContact)
-    Log.d("ContactList",contactsList.toString())
 }
 

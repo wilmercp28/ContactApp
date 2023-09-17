@@ -69,7 +69,6 @@ fun AddContact(
     val email = remember { mutableStateOf("") }
     val photo = remember { mutableStateOf<Bitmap?>(null) }
     val hideKeyboard = remember { mutableStateOf(false) }
-    val validList = remember {mutableListOf<Boolean>()}
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -87,6 +86,7 @@ fun AddContact(
                                 addContact(contactsList,photoString.toString(),name.value,lastName.value,phoneNumber.value,email.value)
                                 scope.launch {
                                     SaveData(dataStore).saveContactListWithImage(contactsList)
+                                    selectedScreen.value = "UI"
                                 }
                             },
                             modifier = Modifier
