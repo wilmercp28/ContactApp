@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -27,32 +28,31 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.android.tools.build.jetifier.core.utils.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBar(
     label: String = "",
+    searchQueries: MutableState<String>,
     hideKeyboard: Boolean = false,
     onFocusClear: () -> Unit = {},
     onSearch: (String) -> Unit = {},
 ) {
-    val text = remember {
-        mutableStateOf("")
-    }
     val isHintDisplayed = remember {
         mutableStateOf(false)
     }
     val focusManager = LocalFocusManager.current
     OutlinedTextField(
-        value = text.value,
+        value = searchQueries.value,
         onValueChange = {
-            text.value = it
-            onSearch(text.value)
+            searchQueries.value = it
+            onSearch(searchQueries.value)
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = {
             focusManager.clearFocus()
-            onSearch(text.value)
+            onSearch(searchQueries.value)
         }),
         maxLines = 1,
         singleLine = true,
@@ -76,11 +76,11 @@ fun SearchBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContactTextFields(
-    label: String = "",
+    label: String,
     numberKeyBoard: Boolean,
     leadingIcon: ImageVector?,
     isRequired: Boolean,
-    isValidInput: MutableList<Boolean>,
+    isValidInput: MutableState<Boolean>,
     hideKeyboard: Boolean = false,
     onFocusClear: (String) -> Unit = {}
 ) {
@@ -103,8 +103,9 @@ fun AddContactTextFields(
             focusedIndicatorColor = Color.Green
         )
     }
-    isValidInput[0] = label == "Name" && text.value.isNotBlank()
-
+    if (label == "Name") {
+        isValidInput.value = text.value.isNotBlank()
+    }
     OutlinedTextField(
         value = text.value,
         onValueChange = {
@@ -133,7 +134,7 @@ fun AddContactTextFields(
                 Icon(imageVector = it, contentDescription = null)
             }
         },
-        trailingIcon = { if (isErrorDisplayed && isRequired) Text(text = "Required", textAlign = TextAlign.Center) else Icon(Icons.Filled.Check ,"")}
+        trailingIcon = { if (isErrorDisplayed && isRequired) Text(text = "Required  ", textAlign = TextAlign.Center) else Icon(Icons.Filled.Check ,"")}
     )
     if (hideKeyboard) {
         focusManager.clearFocus()

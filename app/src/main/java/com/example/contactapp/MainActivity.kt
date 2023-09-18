@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 
 import com.example.contactapp.ui.theme.ContactAppTheme
 import android.content.Context
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +24,14 @@ import com.android.tools.build.jetifier.core.utils.Log
 
 private val Context.dataStore by preferencesDataStore(name = "Contacts")
 class MainActivity : ComponentActivity() {
+    private val phoneCallPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
 
+            } else {
+
+            }
+        }
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -47,8 +55,9 @@ class MainActivity : ComponentActivity() {
                     if (loading) {
                         CircularProgressIndicator()
                     } else {
+                        // Screen Selector
                         when (selectedScreen.value) {
-                            "UI" -> UI(selectedScreen, contactsList,dataStore)
+                            "UI" -> { UI(selectedScreen, contactsList, dataStore,phoneCallPermissionLauncher) }
                             "AddContact" -> AddContact(selectedScreen,contactsList,dataStore)
                         }
                     }
@@ -57,7 +66,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 }
+
 
 
 

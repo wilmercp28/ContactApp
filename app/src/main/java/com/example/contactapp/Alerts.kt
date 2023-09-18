@@ -59,6 +59,46 @@ fun RemoveConfirmation(
 }
 
 @Composable
+fun ConfirmBeforeBacking(
+    showAlert: MutableState<Boolean>,
+    title: String,
+    text: String,
+    selectedScreen: MutableState<String>,
+    screenToBack: String
+){
+    AlertDialog(
+        onDismissRequest = {
+            showAlert.value = false
+        },
+        title = {
+            Text(title)
+        },
+        text = {
+            Text(text)
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    showAlert.value = false
+                    selectedScreen.value = screenToBack
+                }
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = {
+                    showAlert.value = false
+                }
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 fun Alert(
     showDialog: MutableState<Boolean>,
     title: String,

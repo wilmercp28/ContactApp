@@ -57,8 +57,9 @@ fun AddContact(
     contactsList: MutableList<Contact>,
     dataStore: DataStore<Preferences>
 ) {
-    val showAlert = remember { mutableStateOf(false) }
-    val validInputList = remember { mutableListOf(false) }
+    val showBackAlert = remember { mutableStateOf(false) }
+    val showMissingInputAlert = remember { mutableStateOf(false) }
+    val validInputList = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val name = remember { mutableStateOf("") }
     val lastName = remember { mutableStateOf("") }
@@ -79,7 +80,7 @@ fun AddContact(
                     actions = {
                         IconButton(
                             onClick = {
-                                if (validInputList.all { it }) {
+                                if (validInputList.value) {
                                     val photoString = encodeBitmapToBase64(photo.value)
                                     addContact(contactsList, photoString.toString(), name.value, lastName.value, phoneNumber.value, email.value)
                                     scope.launch {
@@ -87,25 +88,32 @@ fun AddContact(
                                         selectedScreen.value = "UI"
                                     }
                                 } else {
-                                    showAlert.value = true
+                                    showMissingInputAlert.value = true
+
                                 }
                             },
                             modifier = Modifier
                                 .background(
                                     MaterialTheme.colorScheme.primary,
-                                    RoundedCornerShape(50)
+                                    RoundedCornerShape(100)
                                 )
-                                .width(90.dp)
+                                .width(100.dp)
                         ){
                             Text(
                                 text = "Save",
-                            textAlign = TextAlign.Center)
+                            textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
                         }
                     },
                     navigationIcon = {
                         IconButton(
                             onClick = {
-                                selectedScreen.value = "UI"
+                                if (name.value.isNotEmpty() || lastName.value.isNotEmpty() || phoneNumber.value.isNotEmpty() || email.value.isNotEmpty() ){
+                                    showBackAlert.value = true
+                                } else {
+                                    selectedScreen.value = "UI"
+                                }
                             }
                         ) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back" )
@@ -114,9 +122,12 @@ fun AddContact(
                 )
             }
         ) {
-            if (showAlert.value)
+            if (showMissingInputAlert.value)
             {
-                Alert(showAlert,"Missing required fields","" )
+                Alert(showMissingInputAlert,"Missing required fields","" )
+            }
+            if (showBackAlert.value){
+                ConfirmBeforeBacking(showBackAlert,"Are You Sure?","All Unsaved data will be remove",selectedScreen,"UI")
             }
             LazyColumn(
                 modifier = Modifier

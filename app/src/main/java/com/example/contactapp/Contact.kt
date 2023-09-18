@@ -1,6 +1,6 @@
 package com.example.contactapp
 
-
+import com.android.tools.build.jetifier.core.utils.Log
 
 
 data class Contact(
@@ -24,12 +24,13 @@ fun addContact(
     val newContactId = contactsList.size + 1
     val newContact = Contact(
         id = newContactId,
-        name = name,
-        lastName = lastName,
-        phoneNumber = phoneNumber,
-        email = email,
+        name = name.removePrefix("Name "),
+        lastName = lastName.removePrefix("Last Name "),
+        phoneNumber = phoneNumber.removePrefix("Phone Number "),
+        email = email.removePrefix("Email "),
         photo = photo
     )
+    Log.d("New Contact", newContact.toString())
     contactsList.add(newContact)
 }
 

@@ -1,12 +1,15 @@
 package com.example.contactapp
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +58,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.startActivity
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 
@@ -63,12 +66,14 @@ import androidx.datastore.preferences.core.Preferences
 fun UI(
     selectedScreen: MutableState<String>,
     contactsList: MutableList<Contact>,
-    dataStore: DataStore<Preferences>
+    dataStore: DataStore<Preferences>,
+    phoneCallPermissionLauncher: ActivityResultLauncher<String>
 ) {
+    val searchQuery = remember { mutableStateOf("") }
     val selectedContact = remember { mutableStateOf(0) }
     val openContact = remember { mutableStateOf(false) }
     if (openContact.value) {
-        ShowContactDetails(contactsList, selectedContact.value,openContact,dataStore)
+        ShowContactDetails(contactsList, selectedContact.value,openContact,dataStore,phoneCallPermissionLauncher)
     } else {
         Surface(
             color = MaterialTheme.colorScheme.background,
@@ -84,6 +89,7 @@ fun UI(
                         Spacer(modifier = Modifier.height(20.dp))
                         SearchBar(
                             "Search Contact",
+                            searchQuery,
                             hideKeyboard.value,
                             { hideKeyboard.value = false })
                     },
@@ -96,7 +102,7 @@ fun UI(
                         }
                     }
                 ) {
-                    ContactListShow(contactsList, it,openContact,selectedContact)
+                    ContactListShow(contactsList, it,openContact,selectedContact,searchQuery)
                 }
             }
         }
@@ -108,16 +114,26 @@ fun ContactListShow(
     contactsList: MutableList<Contact>,
     paddingValues: PaddingValues,
     openContact: MutableState<Boolean>,
-    selectedContact: MutableState<Int>
+    selectedContact: MutableState<Int>,
+    searchQuery: MutableState<String>
 ) {
     val initialIconSize = 50.dp
     val fontSize = 20
+    val filteredContacts = contactsList.filter { contact ->
+        contact.name.contains(searchQuery.value, ignoreCase = true) ||
+                contact.lastName.contains(searchQuery.value, ignoreCase = true) ||
+                contact.phoneNumber.contains(searchQuery.value, ignoreCase = true) ||
+                contact.email.contains(searchQuery.value, ignoreCase = true)
+    }
         LazyColumn(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(paddingValues),
+
         ) {
-            items(contactsList.size) { contact ->
-                val contactInfo = contactsList[contact]
+            items(filteredContacts.size) { contact ->
+                val contactInfo = filteredContacts[contact]
+                val highlightedName = HighlightText(filteredContacts[contact].name, searchQuery.value)
+                val highlightedLastName = HighlightText(filteredContacts[contact].lastName, searchQuery.value)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -142,7 +158,7 @@ fun ContactListShow(
                     ) {
                         if (contactInfo.photo.isNullOrEmpty()) {
                             Text(
-                                text = contactInfo.name.removePrefix("Name ").first().toString(),
+                                text = contactInfo.name,
                                 fontSize = fontSize.sp
                             )
                         } else {
@@ -160,14 +176,14 @@ fun ContactListShow(
                                     )
                                 } else {
                                     Text(
-                                        text = contactInfo.name.removePrefix("Name ").first()
+                                        text = contactInfo.name.first()
                                             .toString(),
                                         fontSize = fontSize.sp
                                     )
                                 }
                             } else {
                                 Text(
-                                    text = contactInfo.name.removePrefix("Name ").first()
+                                    text = contactInfo.name.first()
                                         .toString(),
                                     fontSize = fontSize.sp
                                 )
@@ -175,11 +191,7 @@ fun ContactListShow(
                         }
                     }
                     Text(
-                        text = "${contactInfo.name.removePrefix("Name ")} ${
-                            contactInfo.lastName.removePrefix(
-                                "Last Name "
-                            )
-                        }",
+                        text = "$highlightedName $highlightedLastName",
                         fontSize = fontSize.sp
                     )
                 }
@@ -193,7 +205,8 @@ fun ShowContactDetails(
     contactsList: MutableList<Contact>,
     showingContact: Int,
     openContact: MutableState<Boolean>,
-    dataStore: DataStore<Preferences>
+    dataStore: DataStore<Preferences>,
+    phoneCallPermissionLauncher: ActivityResultLauncher<String>
 ) {
     Surface(
         modifier = Modifier
@@ -208,147 +221,169 @@ fun ShowContactDetails(
         val lastName = contactInfo.lastName.removePrefix("Last Name ").trim()
         val email = contactInfo.email.removePrefix("Email ").trim()
         val phoneNumber = contactInfo.phoneNumber.removePrefix("Phone Number ").trim()
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(text = "") },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                openContact.value = false
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(text = "") },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    openContact.value = false
+                                }
+                            ) {
+                                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                             }
-                        ) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = {
-                                showDialog.value = true
+                        },
+                        actions = {
+                            IconButton(
+                                onClick = {
+                                    showDialog.value = true
+                                }
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete")
                             }
-                        ) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
-
                         }
-                    }
-
-                )
-            }
-        ) {
-            if (showDialog.value){
-             RemoveConfirmation(showDialog,contactsList,showingContact,dataStore,openContact)
-            }
-            Column(
-                modifier = Modifier
-                    .padding(it)
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    )
+                }
             ) {
-                Box(
+                if (showDialog.value) {
+                    RemoveConfirmation(
+                        showDialog,
+                        contactsList,
+                        showingContact,
+                        dataStore,
+                        openContact
+                    )
+                }
+                Column(
                     modifier = Modifier
-                        .size(150.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(100.dp)
-                        )
-                        .aspectRatio(1f)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
+                        .padding(it)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    if (contactInfo.photo != null) {
-                        val imageBytes = Base64.decode(contactInfo.photo, Base64.DEFAULT)
-                        if (imageBytes != null) {
-                            val bitmapPhoto: Bitmap? = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                            if (bitmapPhoto != null) {
-                                Image(
-                                    bitmap = bitmapPhoto.asImageBitmap(),
-                                    contentDescription = "SelectedPhoto",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillBounds,
-                                    alignment = Alignment.Center
-                                )
+                    Box(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                RoundedCornerShape(100.dp)
+                            )
+                            .aspectRatio(1f)
+                            .clip(CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (contactInfo.photo != null) {
+                            val imageBytes = Base64.decode(contactInfo.photo, Base64.DEFAULT)
+                            if (imageBytes != null) {
+                                val bitmapPhoto: Bitmap? =
+                                    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                if (bitmapPhoto != null) {
+                                    Image(
+                                        bitmap = bitmapPhoto.asImageBitmap(),
+                                        contentDescription = "SelectedPhoto",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.FillBounds,
+                                        alignment = Alignment.Center
+                                    )
+                                } else {
+                                    Text(
+                                        text = contactInfo.name.removePrefix("Name ").first()
+                                            .toString().trim(),
+                                        fontSize = iconFontSize.sp,
+                                        textAlign = TextAlign.Center,
+
+                                        )
+                                }
                             } else {
                                 Text(
-                                    text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
+                                    text = contactInfo.name.removePrefix("Name ").first().toString()
+                                        .trim(),
                                     fontSize = iconFontSize.sp,
                                     textAlign = TextAlign.Center,
 
-                                )
+                                    )
                             }
                         } else {
                             Text(
-                                text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
+                                text = contactInfo.name.removePrefix("Name ").first().toString()
+                                    .trim(),
                                 fontSize = iconFontSize.sp,
                                 textAlign = TextAlign.Center,
 
-                            )
+                                )
                         }
-                    } else {
-                        Text(
-                            text = contactInfo.name.removePrefix("Name ").first().toString().trim(),
-                            fontSize = iconFontSize.sp,
-                            textAlign = TextAlign.Center,
-
-                        )
                     }
-                }
-                Spacer(modifier = Modifier.size(20.dp))
-                Text(text ="$name $lastName",fontSize = (fontSize + 10).sp)
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(30.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            RoundedCornerShape(20)
-                        )
-                ) {
-                    Text(
-                        text = "Contact Details",
+                    Spacer(modifier = Modifier.size(20.dp))
+                    Text(text = "$name $lastName", fontSize = (fontSize + 10).sp)
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        textAlign = TextAlign.Center,
-                        fontSize = fontSize.sp
-                    )
-                    if (email.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.padding(20.dp)
-                        ) {
-                            Icon(Icons.Filled.Email, "")
-                            Text(
-                                text = email,
-                                fontSize = fontSize.sp
+                            .fillMaxSize()
+                            .padding(30.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                RoundedCornerShape(20)
                             )
-                        }
-                    }
-                    if (phoneNumber.isNotEmpty()) {
-                        Row(
+                    ) {
+                        Text(
+                            text = "Contact Details",
                             modifier = Modifier
-                                .padding(20.dp)
-                                .clickable {
-                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission) == PackageManager.PERMISSION_GRANTED) {
-                                        val intent = Intent(Intent.ACTION_CALL)
-                                        intent.data = Uri.parse("tel:$phoneNumber")
-                                        startActivity(context, intent, null)
-                                    } else {
-                                        // Request the CALL_PHONE permission
-                                        requestCallPhonePermission()
-                                    }
-                                }
-                        ) {
-                            Icon(Icons.Filled.Phone, "")
-                            Text(
-                                text = contactInfo.phoneNumber.removePrefix("Phone Number ").trim(),
-                                fontSize = fontSize.sp
-                            )
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = fontSize.sp
+                        )
+                        if (email.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Filled.Email, "")
+                                Text(
+                                    text = email,
+                                    fontSize = fontSize.sp
+                                )
+                            }
+                        }
+                        if (phoneNumber.isNotEmpty()) {
+                            // Phone Calls
+                            Row(
+                                modifier = Modifier
+                                    .padding(20.dp)
+                                    .clickable {
+                                        if (hasPhoneCallPermission(context)) {
+                                            val callIntent = Intent(
+                                                Intent.ACTION_CALL,
+                                                Uri.parse("tel:$phoneNumber")
+                                            )
+                                            if (callIntent.resolveActivity(context.packageManager) != null) {
+                                                context.startActivity(callIntent)
+                                            }
+                                        } else {
+                                            requestPhoneCallPermission(phoneCallPermissionLauncher)
+                                        }
+                                    },
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Filled.Phone, "")
+                                Text(
+                                    text = contactInfo.phoneNumber.removePrefix("Phone Number ")
+                                        .trim(),
+                                    fontSize = fontSize.sp
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-
+private fun hasPhoneCallPermission(
+    context: Context
+): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.CALL_PHONE
+    ) == PackageManager.PERMISSION_GRANTED
 }
 
