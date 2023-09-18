@@ -1,10 +1,7 @@
 package com.example.contactapp
 
-import android.content.ContentResolver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -51,9 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.android.tools.build.jetifier.core.utils.Log
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +57,8 @@ fun AddContact(
     contactsList: MutableList<Contact>,
     dataStore: DataStore<Preferences>
 ) {
+    val showAlert = remember { mutableStateOf(false) }
+    val validInputList = remember { mutableListOf(false) }
     val scope = rememberCoroutineScope()
     val name = remember { mutableStateOf("") }
     val lastName = remember { mutableStateOf("") }
@@ -82,11 +79,15 @@ fun AddContact(
                     actions = {
                         IconButton(
                             onClick = {
-                                val photoString = encodeBitmapToBase64(photo.value)
-                                addContact(contactsList,photoString.toString(),name.value,lastName.value,phoneNumber.value,email.value)
-                                scope.launch {
-                                    SaveData(dataStore).saveContactListWithImage(contactsList)
-                                    selectedScreen.value = "UI"
+                                if (validInputList.all { it }) {
+                                    val photoString = encodeBitmapToBase64(photo.value)
+                                    addContact(contactsList, photoString.toString(), name.value, lastName.value, phoneNumber.value, email.value)
+                                    scope.launch {
+                                        SaveData(dataStore).saveContactListWithImage(contactsList)
+                                        selectedScreen.value = "UI"
+                                    }
+                                } else {
+                                    showAlert.value = true
                                 }
                             },
                             modifier = Modifier
@@ -99,7 +100,6 @@ fun AddContact(
                             Text(
                                 text = "Save",
                             textAlign = TextAlign.Center)
-
                         }
                     },
                     navigationIcon = {
@@ -114,6 +114,10 @@ fun AddContact(
                 )
             }
         ) {
+            if (showAlert.value)
+            {
+                Alert(showAlert,"Missing required fields","" )
+            }
             LazyColumn(
                 modifier = Modifier
                     .padding(it),
@@ -122,22 +126,22 @@ fun AddContact(
                         AddPhotoContact(hideKeyboard,photo)
                     }
                     item {
-                        AddContactTextFields("Name", false, Icons.Filled.Face,true,hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Name", false, Icons.Filled.Face,true,validInputList,hideKeyboard.value) { lostFocusString ->
                             name.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Last Name", false, null,false,hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Last Name", false, null,false,validInputList,hideKeyboard.value) { lostFocusString ->
                             lastName.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone,false,hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone,false,validInputList,hideKeyboard.value) { lostFocusString ->
                             phoneNumber.value = lostFocusString
                         }
                     }
                     item {
-                        AddContactTextFields("Email", false, Icons.Filled.Email,false,hideKeyboard.value) { lostFocusString ->
+                        AddContactTextFields("Email", false, Icons.Filled.Email,false,validInputList,hideKeyboard.value) { lostFocusString ->
                             email.value = lostFocusString
                         }
                     }
@@ -145,14 +149,6 @@ fun AddContact(
             )
         }
     }
-}
-fun encodeBitmapToBase64(bitmap: Bitmap?): String? {
-    if (bitmap == null) return null
-
-    val byteArrayOutputStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-    val byteArray = byteArrayOutputStream.toByteArray()
-    return Base64.encodeToString(byteArray, Base64.DEFAULT)
 }
 
 @Composable
@@ -210,51 +206,4 @@ fun AddPhotoContact(
         modifier = Modifier
             .fillMaxWidth()
     )
-}
-fun loadImageFromUri(contentResolver: ContentResolver, uri: Uri, maxSize: Int = 1024): Bitmap? {
-    return try {
-        val inputStream = contentResolver.openInputStream(uri)
-        if (inputStream != null) {
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
-            BitmapFactory.decodeStream(inputStream, null, options)
-
-            // Calculate the inSampleSize value to resize the image
-            options.inSampleSize = calculateInSampleSize(options, maxSize, maxSize)
-
-            // Close the input stream and reopen it for decoding
-            inputStream.close()
-            val newInputStream = contentResolver.openInputStream(uri)
-
-            // Decode the image with the calculated inSampleSize
-            options.inJustDecodeBounds = false
-            val resizedBitmap = BitmapFactory.decodeStream(newInputStream, null, options)
-
-            // Close the new input stream
-            newInputStream?.close()
-
-            resizedBitmap
-        } else {
-            null
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
-}
-fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
-    val height = options.outHeight
-    val width = options.outWidth
-    var inSampleSize = 1
-
-    if (height > reqHeight || width > reqWidth) {
-        val halfHeight = height / 2
-        val halfWidth = width / 2
-
-        while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
-            inSampleSize *= 2
-        }
-    }
-
-    return inSampleSize
 }

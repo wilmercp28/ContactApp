@@ -47,9 +47,8 @@ class MainActivity : ComponentActivity() {
                     if (loading) {
                         CircularProgressIndicator()
                     } else {
-                        UI(selectedScreen, contactsList)
                         when (selectedScreen.value) {
-                            "UI" -> UI(selectedScreen, contactsList)
+                            "UI" -> UI(selectedScreen, contactsList,dataStore)
                             "AddContact" -> AddContact(selectedScreen,contactsList,dataStore)
                         }
                     }

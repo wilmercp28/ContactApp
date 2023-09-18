@@ -1,8 +1,11 @@
 package com.example.contactapp
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,16 +19,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,19 +42,66 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.android.tools.build.jetifier.core.utils.Log
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 
-
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UI(
+    selectedScreen: MutableState<String>,
+    contactsList: MutableList<Contact>,
+    dataStore: DataStore<Preferences>
+) {
+    val selectedContact = remember { mutableStateOf(0) }
+    val openContact = remember { mutableStateOf(false) }
+    if (openContact.value) {
+        ShowContactDetails(contactsList, selectedContact.value,openContact,dataStore)
+    } else {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val hideKeyboard = remember { mutableStateOf(false) }
+            Column(
+                modifier = Modifier
+                    .clickable { hideKeyboard.value = true }
+            ) {
+                Scaffold(
+                    topBar = {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SearchBar(
+                            "Search Contact",
+                            hideKeyboard.value,
+                            { hideKeyboard.value = false })
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(onClick = {
+                            selectedScreen.value = "AddContact"
+                        }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "AddContact")
+                        }
+                    }
+                ) {
+                    ContactListShow(contactsList, it,openContact,selectedContact)
+                }
+            }
+        }
+    }
+}
 @SuppressLint("SuspiciousIndentation")
 @Composable
 fun ContactListShow(
@@ -138,12 +192,15 @@ fun ContactListShow(
 fun ShowContactDetails(
     contactsList: MutableList<Contact>,
     showingContact: Int,
-    openContact: MutableState<Boolean>
+    openContact: MutableState<Boolean>,
+    dataStore: DataStore<Preferences>
 ) {
     Surface(
         modifier = Modifier
             .fillMaxSize()
     ) {
+        val context = LocalContext.current
+        val showDialog = remember { mutableStateOf(false) }
         val iconFontSize = 100
         val fontSize = 20
         val contactInfo = contactsList[showingContact]
@@ -163,11 +220,24 @@ fun ShowContactDetails(
                         ) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                showDialog.value = true
+                            }
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+
+                        }
                     }
 
                 )
             }
         ) {
+            if (showDialog.value){
+             RemoveConfirmation(showDialog,contactsList,showingContact,dataStore,openContact)
+            }
             Column(
                 modifier = Modifier
                     .padding(it)
@@ -229,7 +299,10 @@ fun ShowContactDetails(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(30.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(20))
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(20)
+                        )
                 ) {
                     Text(
                         text = "Contact Details",
@@ -252,7 +325,18 @@ fun ShowContactDetails(
                     }
                     if (phoneNumber.isNotEmpty()) {
                         Row(
-                            modifier = Modifier.padding(20.dp)
+                            modifier = Modifier
+                                .padding(20.dp)
+                                .clickable {
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission) == PackageManager.PERMISSION_GRANTED) {
+                                        val intent = Intent(Intent.ACTION_CALL)
+                                        intent.data = Uri.parse("tel:$phoneNumber")
+                                        startActivity(context, intent, null)
+                                    } else {
+                                        // Request the CALL_PHONE permission
+                                        requestCallPhonePermission()
+                                    }
+                                }
                         ) {
                             Icon(Icons.Filled.Phone, "")
                             Text(
@@ -265,4 +349,6 @@ fun ShowContactDetails(
             }
         }
     }
+
 }
+

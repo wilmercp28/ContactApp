@@ -1,6 +1,6 @@
 package com.example.contactapp
 
-import android.graphics.drawable.Icon
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -81,6 +80,7 @@ fun AddContactTextFields(
     numberKeyBoard: Boolean,
     leadingIcon: ImageVector?,
     isRequired: Boolean,
+    isValidInput: MutableList<Boolean>,
     hideKeyboard: Boolean = false,
     onFocusClear: (String) -> Unit = {}
 ) {
@@ -103,6 +103,8 @@ fun AddContactTextFields(
             focusedIndicatorColor = Color.Green
         )
     }
+    isValidInput[0] = label == "Name" && text.value.isNotBlank()
+
     OutlinedTextField(
         value = text.value,
         onValueChange = {
