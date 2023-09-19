@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
                         // Screen Selector
                         when (selectedScreen.value) {
                             "UI" -> { UI(selectedScreen, contactsList, dataStore,phoneCallPermissionLauncher) }
-                            "AddContact" -> AddContact(selectedScreen,contactsList,dataStore)
+                            "AddContact" -> AddContact(selectedScreen,contactsList,dataStore,false)
                         }
                     }
 

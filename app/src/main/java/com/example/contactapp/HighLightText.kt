@@ -10,7 +10,7 @@ import androidx.compose.ui.text.withStyle
 import java.util.Locale
 
 @Composable
-fun HighlightText(text: String, query: String): AnnotatedString {
+fun highlightText(text: String, query: String): AnnotatedString {
     if (query.isEmpty()) {
         return AnnotatedString(text)
     }

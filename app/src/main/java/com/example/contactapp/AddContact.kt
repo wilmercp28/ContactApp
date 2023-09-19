@@ -1,7 +1,9 @@
 package com.example.contactapp
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -55,18 +57,26 @@ import kotlinx.coroutines.launch
 fun AddContact(
     selectedScreen: MutableState<String>,
     contactsList: MutableList<Contact>,
-    dataStore: DataStore<Preferences>
+    dataStore: DataStore<Preferences>,
+    isEditing: Boolean,
+    contactListIndex: Int = 0,
+    editingMode: MutableState<Boolean> = mutableStateOf(false)
 ) {
     val showBackAlert = remember { mutableStateOf(false) }
-    val showMissingInputAlert = remember { mutableStateOf(false) }
-    val validInputList = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val name = remember { mutableStateOf("") }
-    val lastName = remember { mutableStateOf("") }
-    val phoneNumber = remember { mutableStateOf("") }
-    val email = remember { mutableStateOf("") }
+    val name = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].name else "") }
+    val lastName = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].lastName else "") }
+    val phoneNumber = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].phoneNumber else "") }
+    val email = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].email else "") }
     val photo = remember { mutableStateOf<Bitmap?>(null) }
     val hideKeyboard = remember { mutableStateOf(false) }
+    if (isEditing) {
+        val imageBytes = Base64.decode(contactsList[contactListIndex].photo, Base64.DEFAULT)
+        if (imageBytes != null) {
+            val bitmapPhoto: Bitmap? = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            photo.value = bitmapPhoto
+        }
+    }
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -80,17 +90,33 @@ fun AddContact(
                     actions = {
                         IconButton(
                             onClick = {
-                                if (validInputList.value) {
+                                if (!editingMode.value) {
                                     val photoString = encodeBitmapToBase64(photo.value)
-                                    addContact(contactsList, photoString.toString(), name.value, lastName.value, phoneNumber.value, email.value)
+                                    addContact(
+                                        contactsList,
+                                        photoString.toString(),
+                                        name.value,
+                                        lastName.value,
+                                        phoneNumber.value,
+                                        email.value
+                                    )
+                                } else {
+                                    val photoString = encodeBitmapToBase64(photo.value)
+                                   val newContact = Contact(
+                                        id = contactsList[contactListIndex].id,
+                                        name = name.value,
+                                        lastName = lastName.value,
+                                        phoneNumber = phoneNumber.value,
+                                        email = email.value,
+                                        photo = photoString.toString()
+                                    )
+                                    changeContact(contactsList,newContact,contactListIndex)
+                                }
                                     scope.launch {
                                         SaveData(dataStore).saveContactListWithImage(contactsList)
                                         selectedScreen.value = "UI"
+                                        editingMode.value = false
                                     }
-                                } else {
-                                    showMissingInputAlert.value = true
-
-                                }
                             },
                             modifier = Modifier
                                 .background(
@@ -113,6 +139,7 @@ fun AddContact(
                                     showBackAlert.value = true
                                 } else {
                                     selectedScreen.value = "UI"
+                                    editingMode.value = false
                                 }
                             }
                         ) {
@@ -122,12 +149,14 @@ fun AddContact(
                 )
             }
         ) {
-            if (showMissingInputAlert.value)
-            {
-                Alert(showMissingInputAlert,"Missing required fields","" )
-            }
             if (showBackAlert.value){
-                ConfirmBeforeBacking(showBackAlert,"Are You Sure?","All Unsaved data will be remove",selectedScreen,"UI")
+                ConfirmBeforeBacking("Are You Sure?","All Unsaved data will be remove"){ boolean ->
+                    showBackAlert.value = boolean
+                    if (boolean && editingMode.value){
+                        editingMode.value = false
+                        selectedScreen.value = "UI"
+                    }
+                }
             }
             LazyColumn(
                 modifier = Modifier
@@ -136,26 +165,10 @@ fun AddContact(
                     item {
                         AddPhotoContact(hideKeyboard,photo)
                     }
-                    item {
-                        AddContactTextFields("Name", false, Icons.Filled.Face,true,validInputList,hideKeyboard.value) { lostFocusString ->
-                            name.value = lostFocusString
-                        }
-                    }
-                    item {
-                        AddContactTextFields("Last Name", false, null,false,validInputList,hideKeyboard.value) { lostFocusString ->
-                            lastName.value = lostFocusString
-                        }
-                    }
-                    item {
-                        AddContactTextFields("Phone Number", true, Icons.Filled.Phone,false,validInputList,hideKeyboard.value) { lostFocusString ->
-                            phoneNumber.value = lostFocusString
-                        }
-                    }
-                    item {
-                        AddContactTextFields("Email", false, Icons.Filled.Email,false,validInputList,hideKeyboard.value) { lostFocusString ->
-                            email.value = lostFocusString
-                        }
-                    }
+                    item { AddContactTextFields("Name",name, false, Icons.Filled.Face,hideKeyboard.value) }
+                    item { AddContactTextFields("Last Name",lastName, false, null,hideKeyboard.value) }
+                    item { AddContactTextFields("Phone Number",phoneNumber, true, Icons.Filled.Phone,hideKeyboard.value) }
+                    item { AddContactTextFields("Email",email, false, Icons.Filled.Email,hideKeyboard.value) }
                 }
             )
         }

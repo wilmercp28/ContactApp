@@ -13,6 +13,14 @@ data class Contact(
     val email: String,
 )
 
+fun changeContact(
+    contactsList: MutableList<Contact>,
+    contact: Contact,
+    index: Int
+){
+    contactsList[index] = contact
+}
+
 fun addContact(
     contactsList: MutableList<Contact>,
     photo: String?,

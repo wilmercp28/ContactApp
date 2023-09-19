@@ -60,15 +60,13 @@ fun RemoveConfirmation(
 
 @Composable
 fun ConfirmBeforeBacking(
-    showAlert: MutableState<Boolean>,
     title: String,
     text: String,
-    selectedScreen: MutableState<String>,
-    screenToBack: String
+    callback: (Boolean) -> Unit
 ){
     AlertDialog(
         onDismissRequest = {
-            showAlert.value = false
+            callback(false)
         },
         title = {
             Text(title)
@@ -79,8 +77,7 @@ fun ConfirmBeforeBacking(
         confirmButton = {
             Button(
                 onClick = {
-                    showAlert.value = false
-                    selectedScreen.value = screenToBack
+                    callback(true)
                 }
             ) {
                 Text("Confirm")
@@ -89,7 +86,7 @@ fun ConfirmBeforeBacking(
         dismissButton = {
             Button(
                 onClick = {
-                    showAlert.value = false
+                    callback(false)
                 }
             ) {
                 Text("Cancel")
