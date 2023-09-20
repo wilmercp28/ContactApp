@@ -19,3 +19,14 @@ fun hasPhoneCallPermission(
     ) == PackageManager.PERMISSION_GRANTED
 }
 
+fun requestSmsPermission(smsPermissionLauncher: ActivityResultLauncher<String>) {
+    smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+}
+
+fun hasSmsPermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.SEND_SMS
+    ) == PackageManager.PERMISSION_GRANTED
+}
+

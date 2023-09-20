@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
@@ -43,9 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -64,10 +69,14 @@ fun AddContact(
 ) {
     val showBackAlert = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val name = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].name else "") }
-    val lastName = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].lastName else "") }
-    val phoneNumber = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].phoneNumber else "") }
-    val email = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].email else "") }
+    val name =
+        remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].name else "") }
+    val lastName =
+        remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].lastName else "") }
+    val phoneNumber =
+        remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].phoneNumber else "") }
+    val email =
+        remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].email else "") }
     val photo = remember { mutableStateOf<Bitmap?>(null) }
     val hideKeyboard = remember { mutableStateOf(false) }
     if (isEditing) {
@@ -100,9 +109,14 @@ fun AddContact(
                                         phoneNumber.value,
                                         email.value
                                     )
+                                    name.value = ""
+                                    lastName.value = ""
+                                    phoneNumber.value = ""
+                                    email.value = ""
+                                    photo.value = null
                                 } else {
                                     val photoString = encodeBitmapToBase64(photo.value)
-                                   val newContact = Contact(
+                                    val newContact = Contact(
                                         id = contactsList[contactListIndex].id,
                                         name = name.value,
                                         lastName = lastName.value,
@@ -110,13 +124,18 @@ fun AddContact(
                                         email = email.value,
                                         photo = photoString.toString()
                                     )
-                                    changeContact(contactsList,newContact,contactListIndex)
+                                    changeContact(contactsList, newContact, contactListIndex)
+                                    name.value = ""
+                                    lastName.value = ""
+                                    phoneNumber.value = ""
+                                    email.value = ""
+                                    photo.value = null
                                 }
-                                    scope.launch {
-                                        SaveData(dataStore).saveContactListWithImage(contactsList)
-                                        selectedScreen.value = "UI"
-                                        editingMode.value = false
-                                    }
+                                scope.launch {
+                                    SaveData(dataStore).saveContactListWithImage(contactsList)
+                                    selectedScreen.value = "UI"
+                                    editingMode.value = false
+                                }
                             },
                             modifier = Modifier
                                 .background(
@@ -124,10 +143,10 @@ fun AddContact(
                                     RoundedCornerShape(100)
                                 )
                                 .width(100.dp)
-                        ){
+                        ) {
                             Text(
                                 text = "Save",
-                            textAlign = TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
@@ -135,7 +154,7 @@ fun AddContact(
                     navigationIcon = {
                         IconButton(
                             onClick = {
-                                if (name.value.isNotEmpty() || lastName.value.isNotEmpty() || phoneNumber.value.isNotEmpty() || email.value.isNotEmpty() ){
+                                if (name.value.isNotEmpty() || lastName.value.isNotEmpty() || phoneNumber.value.isNotEmpty() || email.value.isNotEmpty()) {
                                     showBackAlert.value = true
                                 } else {
                                     selectedScreen.value = "UI"
@@ -143,16 +162,19 @@ fun AddContact(
                                 }
                             }
                         ) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back" )
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
                 )
             }
         ) {
-            if (showBackAlert.value){
-                ConfirmBeforeBacking("Are You Sure?","All Unsaved data will be remove"){ boolean ->
+            if (showBackAlert.value) {
+                ConfirmBeforeBacking(
+                    "Are You Sure?",
+                    "All Unsaved data will be remove"
+                ) { boolean ->
                     showBackAlert.value = boolean
-                    if (boolean && editingMode.value){
+                    if (boolean && editingMode.value) {
                         editingMode.value = false
                         selectedScreen.value = "UI"
                     }
@@ -163,21 +185,53 @@ fun AddContact(
                     .padding(it),
                 content = {
                     item {
-                        AddPhotoContact(hideKeyboard,photo)
+                        AddPhotoContact(photo)
                     }
-                    item { AddContactTextFields("Name",name, false, Icons.Filled.Face,hideKeyboard.value) }
-                    item { AddContactTextFields("Last Name",lastName, false, null,hideKeyboard.value) }
-                    item { AddContactTextFields("Phone Number",phoneNumber, true, Icons.Filled.Phone,hideKeyboard.value) }
-                    item { AddContactTextFields("Email",email, false, Icons.Filled.Email,hideKeyboard.value) }
+                    item {
+                        AddContactTextFields(
+                            "Name",
+                            name,
+                            false,
+                            Icons.Filled.Face,
+                            hideKeyboard.value
+                        )
+                    }
+                    item {
+                        AddContactTextFields(
+                            "Last Name",
+                            lastName,
+                            false,
+                            null,
+                            hideKeyboard.value
+                        )
+                    }
+                    item {
+                        AddContactTextFields(
+                            "Phone Number",
+                            phoneNumber,
+                            true,
+                            Icons.Filled.Phone,
+                            hideKeyboard.value
+                        )
+                    }
+                    item {
+                        AddContactTextFields(
+                            "Email",
+                            email,
+                            false,
+                            Icons.Filled.Email,
+                            hideKeyboard.value
+                        )
+                    }
                 }
             )
         }
     }
 }
 
+
 @Composable
 fun AddPhotoContact(
-    hideKeyboard: MutableState<Boolean>,
     photo: MutableState<Bitmap?>
 ) {
     var imageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -187,47 +241,53 @@ fun AddPhotoContact(
     }
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-                imageUri = it
+            imageUri = it
 
         }
-    IconButton(
-        onClick = {
-            hideKeyboard.value = true
-            galleryLauncher.launch("image/*")
-        },
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .size(100.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (photo.value != null) {
-            Box(
-                modifier = Modifier
-                    .aspectRatio(1f)
-                    .clip(CircleShape)
-            ) {
+        IconButton(
+            onClick = {
+                galleryLauncher.launch("image/*")
+            },
+            modifier = Modifier
+                .size(100.dp)
+
+        ) {
+            if (photo.value != null) {
+                Box(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .clip(CircleShape)
+                ) {
+                    Image(
+                        bitmap = photo.value!!.asImageBitmap(),
+                        contentDescription = "SelectedPhoto",
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentScale = ContentScale.FillBounds,
+                        alignment = Alignment.Center
+
+                    )
+                }
+            } else {
                 Image(
-                    bitmap = photo.value!!.asImageBitmap(),
-                    contentDescription = "SelectedPhoto",
+                    painter = painterResource(id = R.drawable.add_photo_alternate_fill0_wght400_grad0_opsz24),
                     modifier = Modifier
                         .fillMaxSize(),
-                    contentScale = ContentScale.FillBounds,
-                    alignment = Alignment.Center
-
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
+                    contentDescription = "Add photo"
                 )
             }
-        } else {
-            Icon(
-                imageVector = Icons.Filled.Face,
-                contentDescription = "PhotoPlaceHolder",
-                modifier = Modifier
-                    .fillMaxSize()
-            )
         }
+        Text(
+            text = "Add photo",
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+        )
     }
-    Text(
-        text = "Add photo",
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-    )
 }

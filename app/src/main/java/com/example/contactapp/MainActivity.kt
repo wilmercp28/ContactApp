@@ -10,8 +10,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-
-import com.example.contactapp.ui.theme.ContactAppTheme
 import android.content.Context
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,17 +18,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.tools.build.jetifier.core.utils.Log
+import com.example.compose.ContactAppTheme
 
 
 private val Context.dataStore by preferencesDataStore(name = "Contacts")
 class MainActivity : ComponentActivity() {
     private val phoneCallPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-
-            } else {
-
-            }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        }
+    private val messagePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         }
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -57,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     } else {
                         // Screen Selector
                         when (selectedScreen.value) {
-                            "UI" -> { UI(selectedScreen, contactsList, dataStore,phoneCallPermissionLauncher) }
+                            "UI" -> { UI(selectedScreen, contactsList, dataStore,phoneCallPermissionLauncher,messagePermissionLauncher) }
                             "AddContact" -> AddContact(selectedScreen,contactsList,dataStore,false)
                         }
                     }
