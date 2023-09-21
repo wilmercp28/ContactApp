@@ -11,6 +11,7 @@ data class Contact(
     val lastName: String,
     val phoneNumber: String,
     val email: String,
+    var favorite: String,
 )
 
 fun changeContact(
@@ -27,7 +28,8 @@ fun addContact(
     name: String,
     lastName: String,
     phoneNumber: String,
-    email: String
+    email: String,
+    favorite: String
 ) {
     val newContactId = contactsList.size + 1
     val newContact = Contact(
@@ -36,7 +38,8 @@ fun addContact(
         lastName = lastName.removePrefix("Last Name "),
         phoneNumber = phoneNumber.removePrefix("Phone Number "),
         email = email.removePrefix("Email "),
-        photo = photo
+        photo = photo,
+        favorite = favorite,
     )
     Log.d("New Contact", newContact.toString())
     contactsList.add(newContact)

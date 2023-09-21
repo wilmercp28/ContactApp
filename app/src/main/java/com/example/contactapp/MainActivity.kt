@@ -1,5 +1,6 @@
 package com.example.contactapp
 
+import android.content.ContentValues.TAG
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import android.content.Context
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,41 +31,55 @@ class MainActivity : ComponentActivity() {
     private val messagePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        try {
 
-        super.onCreate(savedInstanceState)
-        setContent {
+            super.onCreate(savedInstanceState)
+            setContent {
 
-            ContactAppTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    var loading by remember { mutableStateOf(true) }
-                    val contactsList = rememberSaveable { mutableListOf<Contact>() }
+                ContactAppTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        var loading by remember { mutableStateOf(true) }
+                        val contactsList = rememberSaveable { mutableListOf<Contact>() }
 
-                    LaunchedEffect(contactsList) {
-                        val loadedContacts = SaveData(dataStore).loadContactListWithImage()
-                        contactsList.addAll(loadedContacts ?: emptyList())
-                        Log.d("ContactList",contactsList.toString())
-                        loading = false
-                    }
-                    val selectedScreen = rememberSaveable { mutableStateOf("UI") }
-                    if (loading) {
-                        CircularProgressIndicator()
-                    } else {
-                        // Screen Selector
-                        when (selectedScreen.value) {
-                            "UI" -> { UI(selectedScreen, contactsList, dataStore,phoneCallPermissionLauncher,messagePermissionLauncher) }
-                            "AddContact" -> AddContact(selectedScreen,contactsList,dataStore,false)
+                        LaunchedEffect(contactsList) {
+                            val loadedContacts = SaveData(dataStore).loadContactListWithImage()
+                            contactsList.addAll(loadedContacts ?: emptyList())
+                            Log.d("ContactList", contactsList.toString())
+                            loading = false
+                        }
+                        val selectedScreen = rememberSaveable { mutableStateOf("UI") }
+                        val uiScreenVisible = selectedScreen.value == "UI" && !loading
+                        val addContactScreenVisible =
+                            selectedScreen.value == "AddContact" && !loading
+
+                        if (loading) {
+                            CircularProgressIndicator()
+                        } else {
+                            AnimatedVisibility(visible = uiScreenVisible) {
+                                UI(
+                                    selectedScreen,
+                                    contactsList,
+                                    dataStore,
+                                    phoneCallPermissionLauncher
+                                )
+                            }
+
+                            AnimatedVisibility(visible = addContactScreenVisible) {
+                                AddContact(selectedScreen, contactsList, dataStore, false)
+                            }
                         }
                     }
-
                 }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in MainActivity: ${e.message}", e)
         }
     }
-
 }
 
 

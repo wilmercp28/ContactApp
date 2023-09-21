@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
@@ -46,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -69,8 +67,8 @@ fun AddContact(
 ) {
     val showBackAlert = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val name =
-        remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].name else "") }
+    val favorite = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].favorite else "") }
+    val name = remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].name else "") }
     val lastName =
         remember { mutableStateOf(if (editingMode.value) contactsList[contactListIndex].lastName else "") }
     val phoneNumber =
@@ -107,13 +105,9 @@ fun AddContact(
                                         name.value,
                                         lastName.value,
                                         phoneNumber.value,
-                                        email.value
+                                        email.value,
+                                        "false"
                                     )
-                                    name.value = ""
-                                    lastName.value = ""
-                                    phoneNumber.value = ""
-                                    email.value = ""
-                                    photo.value = null
                                 } else {
                                     val photoString = encodeBitmapToBase64(photo.value)
                                     val newContact = Contact(
@@ -122,14 +116,10 @@ fun AddContact(
                                         lastName = lastName.value,
                                         phoneNumber = phoneNumber.value,
                                         email = email.value,
-                                        photo = photoString.toString()
+                                        photo = photoString.toString(),
+                                        favorite = favorite.value
                                     )
                                     changeContact(contactsList, newContact, contactListIndex)
-                                    name.value = ""
-                                    lastName.value = ""
-                                    phoneNumber.value = ""
-                                    email.value = ""
-                                    photo.value = null
                                 }
                                 scope.launch {
                                     SaveData(dataStore).saveContactListWithImage(contactsList)

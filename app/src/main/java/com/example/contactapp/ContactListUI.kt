@@ -8,6 +8,12 @@ import android.net.Uri
 import android.util.Base64
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,6 +41,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -48,9 +55,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -62,32 +72,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun UI(
     selectedScreen: MutableState<String>,
     contactsList: MutableList<Contact>,
     dataStore: DataStore<Preferences>,
-    phoneCallPermissionLauncher: ActivityResultLauncher<String>,
-    messagePermissionLauncher: ActivityResultLauncher<String>
+    phoneCallPermissionLauncher: ActivityResultLauncher<String>
 ) {
-
     val editingMode = remember { mutableStateOf(false) }
     val searchQuery = remember { mutableStateOf("") }
     val selectedContact = remember { mutableStateOf(0) }
     val openContact = remember { mutableStateOf(false) }
-    if (openContact.value) {
+    AnimatedVisibility(
+        visible = openContact.value,
+        enter = scaleIn(),
+        exit = scaleOut()
+    ) {
         ShowContactDetails(
             contactsList,
             selectedContact.value,
             openContact,
             dataStore,
             phoneCallPermissionLauncher,
-            editingMode,
-            messagePermissionLauncher
+            editingMode
         )
-    } else {
+    }
+    AnimatedVisibility(
+        visible = !openContact.value,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
         Surface(
             color = MaterialTheme.colorScheme.background,
             modifier = Modifier.fillMaxSize()
@@ -148,8 +165,12 @@ fun ContactListShow(
             else it.phoneNumber
         }
     )
-    val groupedContacts = sortedContacts.groupBy { contact ->
-        if (contact.name.isNotEmpty()) {
+    val favoriteContacts = sortedContacts.filter { contact -> contact.favorite.toBoolean() }
+    val nonFavoriteContacts = sortedContacts.filterNot { contact -> contact.favorite.toBoolean() }
+    val groupedContacts = mapOf(
+        "Favorites" to favoriteContacts
+    ) + nonFavoriteContacts.groupBy { contact ->
+        val key = if (contact.name.isNotEmpty()) {
             contact.name.firstOrNull()?.uppercase() ?: "#"
         } else if (contact.lastName.isNotEmpty()) {
             contact.lastName.firstOrNull()?.uppercase() ?: "#"
@@ -158,6 +179,7 @@ fun ContactListShow(
         } else {
             "#"
         }
+        key
     }
     LazyColumn(
         modifier = Modifier
@@ -183,18 +205,26 @@ fun ContactListShow(
                 val highlightedLastName = highlightText(contact.lastName, searchQuery.value)
                 val highlightedEmail = highlightText(contact.email, searchQuery.value)
                 val highlightedPhoneNumber = highlightText(contact.phoneNumber, searchQuery.value)
-                val index = contacts.indexOf(contact)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp)
+                        .padding(5.dp)
                         .clickable {
-                            selectedContact.value = index
+                            selectedContact.value = contactsList.indexOf(contact)
                             openContact.value = true
                         },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
+                    Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.Center) {
+                        if (contact.favorite.toBoolean()) {
+                            Icon(
+                                Icons.Filled.Star,
+                                contentDescription = "Favorite",
+                                tint = Color.Yellow
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .size(initialIconSize)
@@ -261,7 +291,7 @@ fun ContactListShow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ShowContactDetails(
     contactsList: MutableList<Contact>,
@@ -269,26 +299,38 @@ fun ShowContactDetails(
     openContact: MutableState<Boolean>,
     dataStore: DataStore<Preferences>,
     phoneCallPermissionLauncher: ActivityResultLauncher<String>,
-    isEditing: MutableState<Boolean>,
-    messagePermissionLauncher: ActivityResultLauncher<String>
+    isEditing: MutableState<Boolean>
 ) {
-    val UI = remember { mutableStateOf("UI") }
-    if (isEditing.value) {
+    val UI = rememberSaveable { mutableStateOf("UI") }
+    AnimatedVisibility(
+        visible = isEditing.value,
+        enter = scaleIn(),
+        exit = scaleOut()
+    ) {
         AddContact(UI, contactsList, dataStore, true, showingContact, isEditing)
-    } else {
+    }
+    AnimatedVisibility(
+        visible = !isEditing.value,
+        enter = scaleIn(),
+        exit = scaleOut()
+    ) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
         ) {
+            val scope = rememberCoroutineScope()
             val context = LocalContext.current
             val showDialog = remember { mutableStateOf(false) }
             val iconFontSize = 100
             val fontSize = 20
             val contactInfo = contactsList[showingContact]
+            val id = contactInfo.id
+            val photo = contactInfo.photo
             val name = contactInfo.name.removePrefix("Name ").trim()
             val lastName = contactInfo.lastName.removePrefix("Last Name ").trim()
             val email = contactInfo.email.removePrefix("Email ").trim()
             val phoneNumber = contactInfo.phoneNumber.removePrefix("Phone Number ").trim()
+            val favorite = rememberSaveable { mutableStateOf(contactInfo.favorite.toBoolean()) }
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -303,6 +345,30 @@ fun ShowContactDetails(
                             }
                         },
                         actions = {
+                            IconButton(
+                                onClick = {
+                                    favorite.value = !favorite.value
+                                    val newContact = Contact(
+                                        id = id,
+                                        name = name,
+                                        lastName = lastName,
+                                        phoneNumber = phoneNumber,
+                                        email = email,
+                                        photo = photo,
+                                        favorite = favorite.value.toString()
+                                    )
+                                    changeContact(contactsList, newContact, showingContact)
+                                    scope.launch {
+                                        SaveData(dataStore).saveContactListWithImage(contactsList)
+                                    }
+                                }
+                            ) {
+                                if (favorite.value) {
+                                    Icon(Icons.Filled.Star, "Favorite", tint = Color.Yellow)
+                                } else {
+                                    Icon(Icons.Filled.Star, "No Favorite")
+                                }
+                            }
                             IconButton(
                                 onClick = {
                                     isEditing.value = true
@@ -412,21 +478,28 @@ fun ShowContactDetails(
                         ) {
                             IconButton(onClick = {
                                 if (hasPhoneCallPermission(context)) {
-                                    val callIntent = Intent(
-                                        Intent.ACTION_CALL,
-                                        Uri.parse("tel:$phoneNumber")
-                                    )
-                                    if (callIntent.resolveActivity(context.packageManager) != null) {
-                                        context.startActivity(callIntent)
+                                    try {
+                                        val phoneNumber = contactInfo.phoneNumber
+                                        if (!phoneNumber.isNullOrEmpty()) {
+                                            val callIntent = Intent(
+                                                Intent.ACTION_CALL,
+                                                Uri.parse("tel:$phoneNumber")
+                                            )
+                                                context.startActivity(callIntent)
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
                                     }
                                 } else {
                                     requestPhoneCallPermission(phoneCallPermissionLauncher)
                                 }
                             }) {
-                                Icon(painter = painterResource(id = R.drawable.call_fill0_wght400_grad0_opsz24),
+                                Icon(
+                                    painter = painterResource(id = R.drawable.call_fill0_wght400_grad0_opsz24),
                                     contentDescription = "MakeCall",
-                                modifier = Modifier
-                                    .size(100.dp))
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                )
                             }
                             IconButton(onClick = {
                                 val smsUri = Uri.parse("smsto:$phoneNumber")
@@ -435,10 +508,12 @@ fun ShowContactDetails(
                                 context.startActivity(smsIntent)
                             }
                             ) {
-                                Icon(painter = painterResource(id = R.drawable.chat_fill0_wght400_grad0_opsz24),
+                                Icon(
+                                    painter = painterResource(id = R.drawable.chat_fill0_wght400_grad0_opsz24),
                                     contentDescription = "SendSms",
                                     modifier = Modifier
-                                        .size(100.dp))
+                                        .size(100.dp)
+                                )
 
                             }
                         }
